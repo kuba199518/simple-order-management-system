@@ -85,6 +85,9 @@ public class Main {
                     String name = scanner.nextLine();
                     orderService.showTotalSpentByCustomer(name);
                     break;
+                case 11:
+                    orderService.showTopSellingProducts();
+                    break;
 
                 default:
                     System.out.println("Invalid option. Try again.");
@@ -108,6 +111,7 @@ public class Main {
         System.out.println("8. Show orders by date");
         System.out.println("9. Show orders by date range");
         System.out.println("10. Show total spent by customer");
+        System.out.println("11. Show top selling products");
         System.out.println("0. Exit");
     }
 

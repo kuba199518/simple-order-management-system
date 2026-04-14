@@ -101,23 +101,16 @@ public class OrderService {
             return;
         }
 
-        System.out.printf("%-5s %-20s %-20s %-10s %-10s %-12s %-12s%n",
-                "ID", "CUSTOMER", "PRODUCT", "PRICE", "QUANTITY", "DATE", "TOTAL");
-        System.out.println("---------------------------------------------------------------------------------------");
+        printOrdersHeader();
 
         for (OrderSummary order : orders) {
-            System.out.printf("%-5d %-20s %-20s %-10s %-10d %-12s %-12s%n",
-                    order.getId(),
-                    order.getCustomerName(),
-                    order.getProductName(),
-                    formatMoney(order.getPrice()),
-                    order.getQuantity(),
-                    order.getOrderDate(),
-                    formatMoney(order.getTotalValue()));
+            printOrderRow(order);
         }
     }
 
     public void showOrdersByCustomer(String customerName) {
+        customerName = customerName.trim();
+
         String sql = """
                 SELECT
                     orders.id,
@@ -146,22 +139,12 @@ public class OrderService {
 
                 while (resultSet.next()) {
                     if (!found) {
-                        System.out.printf("%-5s %-20s %-20s %-10s %-10s %-12s %-12s%n",
-                                "ID", "CUSTOMER", "PRODUCT", "PRICE", "QUANTITY", "DATE", "TOTAL");
-                        System.out.println("---------------------------------------------------------------------------------------");
+                        printOrdersHeader();
                         found = true;
                     }
 
                     OrderSummary order = mapOrder(resultSet);
-
-                    System.out.printf("%-5d %-20s %-20s %-10s %-10d %-12s %-12s%n",
-                            order.getId(),
-                            order.getCustomerName(),
-                            order.getProductName(),
-                            formatMoney(order.getPrice()),
-                            order.getQuantity(),
-                            order.getOrderDate(),
-                            formatMoney(order.getTotalValue()));
+                    printOrderRow(order);
                 }
 
                 if (!found) {
@@ -202,22 +185,12 @@ public class OrderService {
 
                 while (resultSet.next()) {
                     if (!found) {
-                        System.out.printf("%-5s %-20s %-20s %-10s %-10s %-12s %-12s%n",
-                                "ID", "CUSTOMER", "PRODUCT", "PRICE", "QUANTITY", "DATE", "TOTAL");
-                        System.out.println("---------------------------------------------------------------------------------------");
+                        printOrdersHeader();
                         found = true;
                     }
 
                     OrderSummary order = mapOrder(resultSet);
-
-                    System.out.printf("%-5d %-20s %-20s %-10s %-10d %-12s %-12s%n",
-                            order.getId(),
-                            order.getCustomerName(),
-                            order.getProductName(),
-                            formatMoney(order.getPrice()),
-                            order.getQuantity(),
-                            order.getOrderDate(),
-                            formatMoney(order.getTotalValue()));
+                    printOrderRow(order);
                 }
 
                 if (!found) {
@@ -260,22 +233,12 @@ public class OrderService {
 
                 while (resultSet.next()) {
                     if (!found) {
-                        System.out.printf("%-5s %-20s %-20s %-10s %-10s %-12s %-12s%n",
-                                "ID", "CUSTOMER", "PRODUCT", "PRICE", "QUANTITY", "DATE", "TOTAL");
-                        System.out.println("---------------------------------------------------------------------------------------");
+                        printOrdersHeader();
                         found = true;
                     }
 
                     OrderSummary order = mapOrder(resultSet);
-
-                    System.out.printf("%-5d %-20s %-20s %-10s %-10d %-12s %-12s%n",
-                            order.getId(),
-                            order.getCustomerName(),
-                            order.getProductName(),
-                            formatMoney(order.getPrice()),
-                            order.getQuantity(),
-                            order.getOrderDate(),
-                            formatMoney(order.getTotalValue()));
+                    printOrderRow(order);
                 }
 
                 if (!found) {
@@ -285,6 +248,38 @@ public class OrderService {
 
         } catch (SQLException exception) {
             System.out.println("Database error while filtering by range: " + exception.getMessage());
+        }
+    }
+
+    public void showTotalSpentByCustomer(String customerName) {
+        customerName = customerName.trim();
+
+        String sql = """
+                SELECT customers.name, SUM(products.price * orders.quantity) AS total_spent
+                FROM orders
+                JOIN customers ON orders.customer_id = customers.id
+                JOIN products ON orders.product_id = products.id
+                WHERE customers.name = ?
+                GROUP BY customers.name
+                """;
+
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql);
+        ) {
+
+            preparedStatement.setString(1, customerName);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    System.out.println(customerName + " -> Total spent: "
+                            + formatMoney(resultSet.getBigDecimal("total_spent")));
+                } else {
+                    System.out.println("No orders found for customer: " + customerName);
+                }
+            }
+
+        } catch (SQLException exception) {
+            System.out.println("Database error: " + exception.getMessage());
         }
     }
 
@@ -372,28 +367,56 @@ public class OrderService {
     private String formatMoney(BigDecimal value) {
         return String.format("%.2f", value);
     }
-    public void showTotalSpentByCustomer(String customerName) {
+
+    private void printOrdersHeader() {
+        System.out.printf("%-5s %-20s %-20s %-10s %-10s %-12s %-12s%n",
+                "ID", "CUSTOMER", "PRODUCT", "PRICE", "QUANTITY", "DATE", "TOTAL");
+        System.out.println("---------------------------------------------------------------------------------------");
+    }
+
+    private void printOrderRow(OrderSummary order) {
+        System.out.printf("%-5d %-20s %-20s %-10s %-10d %-12s %-12s%n",
+                order.getId(),
+                order.getCustomerName(),
+                order.getProductName(),
+                formatMoney(order.getPrice()),
+                order.getQuantity(),
+                order.getOrderDate(),
+                formatMoney(order.getTotalValue()));
+    }
+    // ... inne metody
+
+    public void showTopSellingProducts() {
         String sql = """
-        SELECT customers.name, SUM(products.price * orders.quantity) AS total_spent
-        FROM orders
-        JOIN customers ON orders.customer_id = customers.id
-        JOIN products ON orders.product_id = products.id
-        WHERE customers.name = ?
-        GROUP BY customers.name
-    """;
+            SELECT products.name, SUM(orders.quantity) AS total_sold
+            FROM orders
+            JOIN products ON orders.product_id = products.id
+            GROUP BY products.name
+            ORDER BY total_sold DESC
+            """;
 
         try (Connection connection = DatabaseConnection.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(sql);
+             ResultSet resultSet = preparedStatement.executeQuery()) {
 
-            preparedStatement.setString(1, customerName);
+            boolean found = false;
 
-            ResultSet resultSet = preparedStatement.executeQuery();
+            System.out.println("\n=== TOP SELLING PRODUCTS ===");
 
-            if (resultSet.next()) {
-                System.out.println(customerName + " -> Total spent: " +
-                        formatMoney(resultSet.getBigDecimal("total_spent")));
-            } else {
-                System.out.println("No orders found for customer: " + customerName);
+            while (resultSet.next()) {
+                if (!found) {
+                    System.out.printf("%-20s %-10s%n", "PRODUCT", "TOTAL SOLD");
+                    System.out.println("------------------------------------------");
+                    found = true;
+                }
+
+                System.out.printf("%-20s %-10d%n",
+                        resultSet.getString("name"),
+                        resultSet.getInt("total_sold"));
+            }
+
+            if (!found) {
+                System.out.println("No data available.");
             }
 
         } catch (SQLException exception) {
