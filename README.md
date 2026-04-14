@@ -159,3 +159,27 @@ ID | Customer        | Product  | Price | Quantity | Total
 * no frameworks like Spring Boot are used
 * the code is intentionally simple and educational
 * suitable as a junior backend portfolio project
+## Backend Concepts Demonstrated
+
+- JDBC (PreparedStatement, ResultSet)
+- SQL JOINs (customers, products, orders)
+- Data validation (input and business logic)
+- Aggregation queries (SUM, GROUP BY)
+- Filtering (by customer, date, date range)
+- Reporting (total spending, top selling products)
+
+## How to Run
+
+1. Create PostgreSQL database
+2. Run schema.sql and seed.sql
+3. Set environment variables:
+  - DB_USER
+  - DB_PASSWORD
+4. Run Main.java
+
+## Future Improvements
+
+- REST API (Spring Boot)
+- Frontend (React)
+- Authentication
+- Docker support
